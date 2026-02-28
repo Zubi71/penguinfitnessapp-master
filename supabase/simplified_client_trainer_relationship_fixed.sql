@@ -1,0 +1,85 @@
+-- Simplified client-trainer relationship table (FIXED VERSION)
+-- Only essential fields: client_id, trainer_id (removed user_id dependency)
+
+-- Step 1: Create the simplified junction table
+CREATE TABLE IF NOT EXISTS client_trainer_relationships (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES clients(id) ON DELETE CASCADE,  -- The client record ID
+  trainer_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- The trainer's user ID
+  assigned_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(client_id, trainer_id) -- Prevent duplicate client-trainer pairs
+);
+
+-- Step 2: Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_client_trainer_client_id ON client_trainer_relationships(client_id);
+CREATE INDEX IF NOT EXISTS idx_client_trainer_trainer_id ON client_trainer_relationships(trainer_id);
+
+-- Step 3: Enable Row Level Security
+ALTER TABLE client_trainer_relationships ENABLE ROW LEVEL SECURITY;
+
+-- Step 4: Drop existing policies (if they exist) and create new ones
+DO $$
+BEGIN
+    -- Drop existing policies if they exist
+    DROP POLICY IF EXISTS "Trainers can view their client relationships" ON client_trainer_relationships;
+    DROP POLICY IF EXISTS "Trainers can insert their client relationships" ON client_trainer_relationships;
+    DROP POLICY IF EXISTS "Trainers can update their client relationships" ON client_trainer_relationships;
+    DROP POLICY IF EXISTS "Trainers can delete their client relationships" ON client_trainer_relationships;
+    
+    -- Create new policies
+    CREATE POLICY "Trainers can view their client relationships" ON client_trainer_relationships
+      FOR SELECT USING (auth.uid() = trainer_id);
+
+    CREATE POLICY "Trainers can insert their client relationships" ON client_trainer_relationships
+      FOR INSERT WITH CHECK (auth.uid() = trainer_id);
+
+    CREATE POLICY "Trainers can update their client relationships" ON client_trainer_relationships
+      FOR UPDATE USING (auth.uid() = trainer_id);
+
+    CREATE POLICY "Trainers can delete their client relationships" ON client_trainer_relationships
+      FOR DELETE USING (auth.uid() = trainer_id);
+END $$;
+
+-- Step 5: Add comment
+COMMENT ON TABLE client_trainer_relationships IS 'Simplified many-to-many relationship between clients and trainers';
+
+-- Step 6: Migration: Move existing trainer_id from clients table to the new relationship table
+INSERT INTO client_trainer_relationships (client_id, trainer_id)
+SELECT
+  c.id as client_id,
+  c.trainer_id
+FROM clients c
+WHERE c.trainer_id IS NOT NULL
+ON CONFLICT (client_id, trainer_id) DO NOTHING;
+
+-- Step 7: Verification
+DO $$
+BEGIN
+    -- Check if table exists
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_name = 'client_trainer_relationships'
+        AND table_schema = 'public'
+    ) THEN
+        RAISE NOTICE 'SUCCESS: client_trainer_relationships table created';
+    ELSE
+        RAISE WARNING 'ISSUE: client_trainer_relationships table was not created';
+    END IF;
+
+    -- Check if indexes exist
+    IF EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE tablename = 'client_trainer_relationships'
+        AND indexname LIKE '%client_id%'
+    ) THEN
+        RAISE NOTICE 'SUCCESS: client_trainer_relationships indexes created';
+    ELSE
+        RAISE WARNING 'ISSUE: client_trainer_relationships indexes may not have been created';
+    END IF;
+
+    -- Check migration count
+    RAISE NOTICE 'Migration completed: % existing client-trainer relationships migrated',
+        (SELECT COUNT(*) FROM client_trainer_relationships);
+END $$; 

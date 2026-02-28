@@ -1,0 +1,45 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1MbaRCoQTAJPxSmS8WSaBElqIPE2tiKUD6dqDlW01kDs/edit?usp=drivesdk",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1MbaRCoQTAJPxSmS8WSaBElqIPE2tiKUD6dqDlW01kDs",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        592
+      ],
+      "id": "cc7ea6bd-bb1c-4e5a-9e3b-4b653474f5d0",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "c51kL48UbdCaXOKf",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "ce60dce426ee27373a8a802800a5dde4aedb97f198c3b8c14e0ea7ab0a4a03e2"
+  }
+}
